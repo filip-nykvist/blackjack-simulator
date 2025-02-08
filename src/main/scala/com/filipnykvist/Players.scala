@@ -9,7 +9,6 @@ object Players {
     lazy val score: Int = hand.map(_.rank.value).sum
 
     def status(compScore: Int = 16): Status = score match {
-      case 21                  => BlackJack
       case v if v <= compScore => Draw
       case v if v > 21         => Bust
       case v                   => Stop(v)
@@ -35,7 +34,6 @@ object Players {
 
   sealed trait Status
   object Status {
-    case object BlackJack       extends Status
     case object Bust            extends Status
     case object Draw            extends Status
     case class Stop(value: Int) extends Status

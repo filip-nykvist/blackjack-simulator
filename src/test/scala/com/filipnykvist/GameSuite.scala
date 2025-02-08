@@ -7,8 +7,8 @@ import com.filipnykvist.Players._
 class GameSuite extends munit.FunSuite {
   val sortedDeck = DeckOfCards.create
 
-  val blackJack   = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.King))
   val bust        = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.Seven), Card(Suite.Hearts, Rank.Eight))
+  val handScore21 = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.King))
   val handScore19 = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.Eight))
   val handScore17 = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.Six))
   val handScore15 = List(Card(Suite.Hearts, Rank.Ace), Card(Suite.Hearts, Rank.Four))
@@ -17,8 +17,14 @@ class GameSuite extends munit.FunSuite {
   test("Correctly deal cards to player and dealer") {
     val initState: GameState = Game.deal(sortedDeck).evalLeft
 
-    assert(initState.player.hand == List(Card(Suite.Hearts, Rank.Four), Card(Suite.Hearts, Rank.Two)), "Player did not get correct cards")
-    assert(initState.dealer.hand == List(Card(Suite.Hearts, Rank.Five), Card(Suite.Hearts, Rank.Three)), "Dealer did not get correct cards")
+    assert(
+      initState.player.hand == List(Card(Suite.Hearts, Rank.Four), Card(Suite.Hearts, Rank.Two)),
+      "Player did not get correct cards"
+    )
+    assert(
+      initState.dealer.hand == List(Card(Suite.Hearts, Rank.Five), Card(Suite.Hearts, Rank.Three)),
+      "Dealer did not get correct cards"
+    )
   }
 
   test("Game should end after 'deal' with player as winner after getting blackjack") {
@@ -34,8 +40,8 @@ class GameSuite extends munit.FunSuite {
     val result: GameOver = Game.deal(deck).evalRight
 
     assert(result.winner.name == "Sam", "Sam should win")
-    assert(result.player.status() == BlackJack, "Sam should win with blackjack")
-    assert(result.dealer.status() == BlackJack, "Sam should win with blackjack even though dealer has blackjack")
+    assert(result.player.status() == Stop(21), "Sam should win with blackjack")
+    assert(result.dealer.status() == Stop(21), "Sam should win with blackjack even though dealer has blackjack")
   }
 
   test("Game should end after 'deal' with dealer as winner after getting blackjack") {
@@ -51,7 +57,7 @@ class GameSuite extends munit.FunSuite {
     val result: GameOver = Game.deal(deck).evalRight
 
     assert(result.winner.name == "Dealer", "Dealer should win")
-    assert(result.dealer.status() == BlackJack, "Dealer should win with blackjack")
+    assert(result.dealer.status() == Stop(21), "Dealer should win with blackjack")
   }
 
   test("Game should end after 'deal' with dealer as winner if both dealer and player are bust") {
@@ -86,22 +92,20 @@ class GameSuite extends munit.FunSuite {
     assert(result.dealer.score > result.player.score, "Dealer should stop when has higher score than player")
   }
 
-  test("End game with player as winner if player draws blackjack") {
-    val deck   = DeckOfCards(List(Card(Suite.Spades, Rank.Ace)))
+  test("End game with player as winner if player gets higher score than dealer") {
+    val deck   = DeckOfCards(List(Card(Suite.Spades, Rank.Ace), Card(Suite.Hearts, Rank.Eight), Card(Suite.Diamonds, Rank.Five)))
     val state  = PlayersTurn(deck, Player("Filip", handScore10), Dealer(handScore10)).lift
     val result = play(state)
 
     assert(result.winner.name == "Filip", "Dealer should not win when player gets blackjack")
-    assert(result.player.status() == BlackJack, "Player did not get blackjack")
   }
 
-  test("End game with dealer as winner if dealer draws blackjack") {
-    val deck   = DeckOfCards(List(Card(Suite.Spades, Rank.Ace)))
+  test("End game with dealer as winner if dealer get higher score than player") {
+    val deck   = DeckOfCards(List(Card(Suite.Spades, Rank.Seven), Card(Suite.Diamonds, Rank.Four)))
     val state  = PlayersTurn(deck, Player(handScore17), Dealer(handScore10)).lift
     val result = play(state)
 
     assert(result.winner.name == "Dealer", "Player should not win when dealer gets blackjack")
-    assert(result.dealer.status() == BlackJack, "Dealer did not get blackjack")
   }
 
   test("End game with dealer as winner if player goes bust") {
@@ -119,6 +123,16 @@ class GameSuite extends munit.FunSuite {
     val result = play(state)
 
     assert(result.winner.name == "Filip", "Player should win when dealer goes bust")
+    assert(result.dealer.status() == Bust, "Dealer did not go bust")
+  }
+
+  test("TO DEMONSTRATE: Dealer should win if ONLY dealer bust after deal, but player draw bust") {
+    val deck = DeckOfCards(List(Card(Suite.Spades, Rank.King)))
+    val state = PlayersTurn(deck, Player("Filip", handScore15), Dealer(bust)).lift
+    val result = play(state)
+
+    assert(result.winner.name == "Dealer", "Dealer should win")
+    assert(result.player.status() == Bust, "Player did not go bust")
     assert(result.dealer.status() == Bust, "Dealer did not go bust")
   }
 

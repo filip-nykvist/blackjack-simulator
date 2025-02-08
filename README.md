@@ -20,3 +20,16 @@ Or, simply run with sbt:
 sbt run
 sbt "run path/to/file.txt"
 ```
+
+## Note:
+The game rules do not explicitly specify what happens if ONLY the dealer goes bust after the 'deal' phase, 
+This may have an impact on the result of the game. 
+
+To reproduce: 
+1. Player is dealt: HK, H6
+2. Dealer is dealt: SA, CA
+3. Player draws: HQ
+
+> #### Question:
+> 
+> does player win after stage 2? - OR does dealer win after stage 3

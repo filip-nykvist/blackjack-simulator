@@ -1,10 +1,10 @@
 package com.filipnykvist
 
+import com.filipnykvist.Players.Status._
+import com.filipnykvist.Players._
+
 import scala.annotation.tailrec
 import scala.util.chaining.scalaUtilChainingOps
-
-import com.filipnykvist.Players.Status.{BlackJack, Bust, Draw, Stop}
-import com.filipnykvist.Players.{Dealer, Player, PlayerBase}
 
 object Game {
 
@@ -18,11 +18,10 @@ object Game {
       }
       .pipe { case (deck, player, dealer) =>
         (player.status(), dealer.status()) match {
-          case (BlackJack, _) => Right(GameOver(player, player, dealer))
-          case (_, BlackJack) => Right(GameOver(dealer, player, dealer))
-          case (Bust, _)      => Right(GameOver(dealer, player, dealer))
-          case (_, Bust)      => Right(GameOver(player, player, dealer))
-          case _              => Left(PlayersTurn(deck, player, dealer))
+          case (Stop(21), _) => Right(GameOver(player, player, dealer))
+          case (_, Stop(21)) => Right(GameOver(dealer, player, dealer))
+          case (Bust, Bust)  => Right(GameOver(dealer, player, dealer))
+          case _             => Left(PlayersTurn(deck, player, dealer))
         }
       }
   }
@@ -54,16 +53,14 @@ object Game {
 
   case class PlayersTurn(deck: DeckOfCards, player: Player, dealer: Dealer) extends GameState {
     def playRound: Game = player.status() match {
-      case BlackJack => GameOver(player, player, dealer).lift
-      case Bust      => GameOver(dealer, player, dealer).lift
-      case Stop(_)   => DealersTurn(deck, player, dealer).lift
-      case Draw      => deck.draw.pipe { case (card, deck) => PlayersTurn(deck, player.deal(card), dealer) }.lift
+      case Bust    => GameOver(dealer, player, dealer).lift
+      case Draw    => deck.draw.pipe { case (card, deck) => PlayersTurn(deck, player.deal(card), dealer) }.lift
+      case Stop(_) => DealersTurn(deck, player, dealer).lift
     }
   }
 
   case class DealersTurn(deck: DeckOfCards, player: Player, dealer: Dealer) extends GameState {
     def playRound: Game = dealer.status(player.score) match {
-      case BlackJack   => GameOver(dealer, player, dealer).lift
       case Bust        => GameOver(player, player, dealer).lift
       case Draw        => deck.draw.pipe { case (card, deck) => DealersTurn(deck, player, dealer.deal(card)) }.lift
       case Stop(score) =>
